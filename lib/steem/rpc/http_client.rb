@@ -17,7 +17,7 @@ module Steem
       # 
       # @private
       TIMEOUT_ERRORS = [Net::OpenTimeout, JSON::ParserError, Net::ReadTimeout,
-        Errno::EBADF, Errno::ECONNREFUSED, IOError]
+        Errno::EBADF, IOError, Errno::ENETDOWN, Steem::RemoteDatabaseLockError]
       
       # @private
       POST_HEADERS = {
@@ -29,8 +29,8 @@ module Steem
       
       def http
         @http ||= Net::HTTP.new(uri.host, uri.port).tap do |http|
-          http.use_ssl = true
-          http.keep_alive_timeout = 2 # seconds
+          http.use_ssl = true if uri.to_s =~ /^https/i
+          http.keep_alive_timeout = 150 # seconds
           
           # WARNING This method opens a serious security hole. Never use this
           # method in production code.
@@ -106,6 +106,22 @@ module Steem
                 end
               end
             else; response
+            end
+            
+            [response].flatten.each_with_index do |r, i|
+              if defined?(r.error) && !!r.error
+                if !!r.error.message
+                  begin
+                    rpc_method_name = "#{api_name}.#{api_method}"
+                    rpc_args = [request_object].flatten[i]
+                    raise_error_response rpc_method_name, rpc_args, r
+                  rescue *TIMEOUT_ERRORS => e
+                    throw retry_timeout(:tota_cera_pila, e)
+                  end
+                else
+                  raise Steem::ArgumentError, r.error.inspect
+                end
+              end
             end
             
             yield_response response, &block

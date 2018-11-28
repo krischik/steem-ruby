@@ -7,6 +7,7 @@ SimpleCov.merge_timeout 3600
 
 require 'steem'
 require 'minitest/autorun'
+require 'minitest/line/describe_track'
 require 'webmock/minitest'
 require 'vcr'
 require 'yaml'
@@ -33,7 +34,7 @@ VCR.insert_cassette('global_cassette', record: :once, match_requests_on: [:metho
 class Steem::Test < MiniTest::Test
   defined? prove_it! and prove_it!
   
-  TEST_NODE = Steem::ChainConfig::NETWORKS_STEEM_DEFAULT_NODE
+  TEST_NODE = ENV.fetch 'TEST_NODE', Steem::ChainConfig::NETWORKS_STEEM_DEFAULT_NODE
   # TEST_NODE = Steem::ChainConfig::NETWORKS_TEST_DEFAULT_NODE
   
   # Most likely modes: 'once' and 'new_episodes'

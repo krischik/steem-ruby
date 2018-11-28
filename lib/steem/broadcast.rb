@@ -31,8 +31,9 @@ module Steem
   # For details on what to pass to these methods, check out the {https://developers.steem.io/apidefinitions/broadcast-ops Steem Developer Portal Broadcast Operations} page.
   class Broadcast
     extend Retriable
+    extend Utils
     
-    DEFAULT_MAX_ACCEPTED_PAYOUT = Type::Amount.new(["1000000000", 3, "@@000000013"])
+    DEFAULT_MAX_ACCEPTED_PAYOUT = Type::Amount.new(amount: '1000000000', precision: 3, nai: '@@000000013')
     
     # This operation is used to cast a vote on a post/comment.
     # 
@@ -174,9 +175,9 @@ module Steem
       }]]
       
       max_accepted_payout = if params.keys.include? :max_accepted_payout
-        Type::Amount.to_nia(params[:max_accepted_payout])
+        normalize_amount(options.merge amount: params[:max_accepted_payout])
       else
-        DEFAULT_MAX_ACCEPTED_PAYOUT.to_nia
+        normalize_amount(options.merge amount: DEFAULT_MAX_ACCEPTED_PAYOUT)
       end
       
       allow_votes = if params.keys.include? :allow_votes
@@ -196,13 +197,17 @@ module Steem
         permlink: params[:permlink],
         max_accepted_payout: max_accepted_payout,
         percent_steem_dollars: params[:percent_steem_dollars] || 10000,
+        # allow_replies: allow_replies,
         allow_votes: allow_votes,
         allow_curation_rewards: allow_curation_rewards,
         extensions: []
       }
       
       if !!params[:beneficiaries]
-        comment_options[:extensions] << [0, {beneficiaries: params[:beneficiaries]}]
+        comment_options[:extensions] << [
+          comment_options[:extensions].size,
+          normalize_beneficiaries(options.merge(beneficiaries: params[:beneficiaries]))
+        ]
       end
       
       ops << [:comment_options, comment_options]
@@ -274,7 +279,7 @@ module Steem
       params = options[:params]
       check_required_fields(params, *required_fields)
       
-      params[:amount] = Type::Amount.to_nia(params[:amount])
+      params[:amount] = normalize_amount(options.merge amount: params[:amount])
       
       ops = [[:transfer, params]]
       
@@ -310,7 +315,7 @@ module Steem
       params = options[:params]
       check_required_fields(params, *required_fields)
       
-      params[:amount] = Type::Amount.to_nia(params[:amount])
+      params[:amount] = normalize_amount(options.merge amount: params[:amount])
       
       ops = [[:transfer_to_vesting, params]]
       
@@ -336,7 +341,7 @@ module Steem
       params = options[:params]
       check_required_fields(params, *required_fields)
       
-      params[:vesting_shares] = Type::Amount.to_nia(params[:vesting_shares])
+      params[:vesting_shares] = normalize_amount(options.merge amount: params[:vesting_shares])
       
       ops = [[:withdraw_vesting, params]]
       
@@ -363,8 +368,8 @@ module Steem
       params = options[:params]
       check_required_fields(params, *required_fields)
       
-      params[:amount_to_sell] = Type::Amount.to_nia(params[:amount_to_sell])
-      params[:min_to_receive] = Type::Amount.to_nia(params[:min_to_receive])
+      params[:amount_to_sell] = normalize_amount(options.merge amount: params[:amount_to_sell])
+      params[:min_to_receive] = normalize_amount(options.merge amount: params[:min_to_receive])
       
       if !!params[:expiration]
         params[:expiration] = Time.parse(params[:expiration].to_s)
@@ -414,8 +419,8 @@ module Steem
       exchange_rate = params[:exchange_rate] rescue nil || {}
       base = exchange_rate[:base]
       quote = exchange_rate[:quote]
-      params[:exchange_rate][:base] = Type::Amount.to_nia(base)
-      params[:exchange_rate][:quote] = Type::Amount.to_nia(quote)
+      params[:exchange_rate][:base] = normalize_amount(options.merge amount: base)
+      params[:exchange_rate][:quote] = normalize_amount(options.merge amount: quote)
       
       ops = [[:feed_publish, params]]
       
@@ -438,7 +443,7 @@ module Steem
       params = options[:params]
       check_required_fields(params, *required_fields)
       
-      params[:amount] = Type::Amount.to_nia(params[:amount])
+      params[:amount] = normalize_amount(options.merge amount: params[:amount])
       
       ops = [[:convert, params]]
       
@@ -502,9 +507,71 @@ module Steem
       
       check_required_fields(params, *required_fields)
       
-      params[:fee] = Type::Amount.to_nia(params[:fee])
+      params[:fee] = normalize_amount(options.merge amount: params[:fee])
       
       ops = [[:account_create, params]]
+      
+      process(options.merge(ops: ops), &block)
+    end
+    
+    # Create a claimed account.
+    #     options = {
+    #       wif: wif,
+    #       params: {
+    #         creator: creator_account_name,
+    #         new_account_name: new_account_name,
+    #         owner: {
+    #           weight_threshold: 1,
+    #           account_auths: [],
+    #           key_auths: [[owner_public_key, 1]],
+    #         },
+    #         active: {
+    #           weight_threshold: 1,
+    #           account_auths: [],
+    #           key_auths: [[active_public_key, 1]],
+    #         },
+    #         posting: {
+    #           weight_threshold: 1,
+    #           account_auths: [],
+    #           key_auths: [[posting_public_key, 1]],
+    #         },
+    #         memo_key: memo_public_key,
+    #         json_metadata: '{}'
+    #       }
+    #     }
+    # 
+    #     Steem::Broadcast.create_claimed_account(options)
+    # 
+    # @param options [Hash] options
+    # @option options [String] :wif Active wif
+    # @option options [Hash] :params
+    #   * :creator (String)
+    #   * :new_account_name (String)
+    #   * :owner (Hash)
+    #   * :active (Hash)
+    #   * :posting (Hash)
+    #   * :memo_key (String)
+    #   * :metadata (Hash) Metadata of the account, becomes `json_metadata`.
+    #   * :json_metadata (String) String version of `metadata` (use one or the other).
+    #   * :extensions (Array) (optional)
+    # @option options [Boolean] :pretend Just validate, do not broadcast.
+    # @see https://developers.steem.io/apidefinitions/broadcast-ops#broadcast_ops_create_claimed_account
+    def self.create_claimed_account(options, &block)
+      required_fields = %i(creator new_account_name owner active posting memo_key json_metadata)
+      params = options[:params]
+      
+      if !!params[:metadata] && !!params[:json_metadata]
+        raise Steem::ArgumentError, 'Assign either metadata or json_metadata, not both.'
+      end
+      
+      metadata = params.delete(:metadata) || {}
+      metadata ||= (JSON[params[:json_metadata]] || nil) || {}
+      params[:json_metadata] = metadata.to_json
+      
+      check_required_fields(params, *required_fields)
+      
+      params[:extensions] ||= []
+      ops = [[:create_claimed_account, params]]
       
       process(options.merge(ops: ops), &block)
     end
@@ -603,10 +670,77 @@ module Steem
       check_required_fields(params, *required_fields)
       
       account_creation_fee = params[:props][:account_creation_fee] rescue nil
-      params[:props][:account_creation_fee] = Type::Amount.to_nia(account_creation_fee)
-      params[:fee] = Type::Amount.to_nia(params[:fee])
+      params[:props][:account_creation_fee] = normalize_amount(options.merge amount: account_creation_fee)
+      params[:fee] = normalize_amount(options.merge amount: params[:fee])
       
       ops = [[:witness_update, params]]
+      
+      process(options.merge(ops: ops), &block)
+    end
+    
+    # Extensible replacement for #witness_update that supports additional
+    # properties added since HF20 and beyond.
+    #
+    #     options = {
+    #       wif: wif,
+    #       params: {
+    #         owner: witness_account_name,
+    #         props: {
+    #           account_creation_fee: '0.000 STEEM',
+    #           maximum_block_size: 131072,
+    #           sbd_interest_rate: 1000,
+    #           account_subsidy_budget: 50000,
+    #           account_subsidy_decay: 330782,
+    #           sbd_exchange_rate: '1.000 STEEM',
+    #           url: "https://steemit.com",
+    #           new_signing_key: 'STM8LoQjQqJHvotqBo7HjnqmUbFW9oJ2theyqonzUd9DdJ7YYHsvD'
+    #         }
+    #       }
+    #     }
+    # 
+    #     Steem::Broadcast.witness_set_properties(options)
+    #
+    # @param options [Hash] options
+    # @option options [String] :wif Active wif
+    # @option options [Hash] :params
+    #   * :owner (String)
+    #   * :props (String)
+    # @option options [Boolean] :pretend Just validate, do not broadcast.
+    # @see https://developers.steem.io/apidefinitions/broadcast-ops#broadcast_ops_witness_set_properties
+    # @see https://github.com/steemit/steem/blob/master/doc/witness_parameters.md
+    def self.witness_set_properties(options, &block)
+      required_fields = %i(owner props)
+      params = options[:params]
+      check_required_fields(params, *required_fields)
+      
+      if !!(account_creation_fee = params[:props][:account_creation_fee] rescue nil)
+        params[:props][:account_creation_fee] = normalize_amount(options.merge amount: account_creation_fee, serialize: true)
+      end
+      
+      if !!(sbd_exchange_rate = params[:props][:sbd_exchange_rate] rescue nil)
+        params[:props][:sbd_exchange_rate][:base] = normalize_amount(options.merge amount: sbd_exchange_rate[:base], serialize: true)
+        params[:props][:sbd_exchange_rate][:quote] = normalize_amount(options.merge amount: sbd_exchange_rate[:quote], serialize: true)
+        params[:props][:sbd_exchange_rate] = params[:props][:sbd_exchange_rate].to_json
+      end
+      
+      %i(key new_signing_key).each do |key|
+        if !!params[key] && params[key].size == 53
+          params[key] = params[key][3..-1]
+        end
+      end
+      
+      %i(account_creation_fee sbd_exchange_rate url new_signing_key).each do |key|
+        next unless !!params[:props][key]
+        
+        val = params[:props][key].to_s
+          
+        params[:props][key] = hexlify val unless val =~ /^[0-9A-F]+$/i
+      end
+      
+      params[:props] = params[:props].to_a
+      
+      params[:extensions] ||= []
+      ops = [[:witness_set_properties, params]]
       
       process(options.merge(ops: ops), &block)
     end
@@ -844,9 +978,9 @@ module Steem
       
       check_required_fields(params, *required_fields)
       
-      params[:sbd_amount] = Type::Amount.to_nia(params[:sbd_amount])
-      params[:steem_amount] = Type::Amount.to_nia(params[:steem_amount])
-      params[:fee] = Type::Amount.to_nia(params[:fee])
+      params[:sbd_amount] = normalize_amount(options.merge amount: params[:sbd_amount])
+      params[:steem_amount] = normalize_amount(options.merge amount: params[:steem_amount])
+      params[:fee] = normalize_amount(options.merge amount: params[:fee])
       
       params[:ratification_deadline] = Time.parse(params[:ratification_deadline].to_s)
       params[:ratification_deadline] = params[:ratification_deadline].strftime('%Y-%m-%dT%H:%M:%S')
@@ -905,8 +1039,8 @@ module Steem
       params = options[:params]
       check_required_fields(params, *required_fields)
       
-      params[:sbd_amount] = Type::Amount.to_nia(params[:sbd_amount])
-      params[:steem_amount] = Type::Amount.to_nia(params[:steem_amount])
+      params[:sbd_amount] = normalize_amount(options.merge amount: params[:sbd_amount])
+      params[:steem_amount] = normalize_amount(options.merge amount: params[:steem_amount])
 
       ops = [[:escrow_release, params]]
       
@@ -954,7 +1088,7 @@ module Steem
       check_required_fields(params, *required_fields)
       
       params[:memo] ||= ''
-      params[:amount] = Type::Amount.to_nia(params[:amount])
+      params[:amount] = normalize_amount(options.merge amount: params[:amount])
 
       ops = [[:transfer_to_savings, params]]
       
@@ -977,7 +1111,7 @@ module Steem
       check_required_fields(params, *required_fields)
       
       params[:memo] ||= ''
-      params[:amount] = Type::Amount.to_nia(params[:amount])
+      params[:amount] = normalize_amount(options.merge amount: params[:amount])
 
       ops = [[:transfer_from_savings, params]]
       
@@ -1039,7 +1173,7 @@ module Steem
       params = options[:params]
       check_required_fields(params, *required_fields)
       
-      params[:vesting_shares] = Type::Amount.to_nia(params[:vesting_shares])
+      params[:vesting_shares] = normalize_amount(options.merge amount: params[:vesting_shares])
       ops = [[:delegate_vesting_shares, params]]
       
       process(options.merge(ops: ops), &block)
@@ -1075,8 +1209,8 @@ module Steem
       
       check_required_fields(params, *required_fields)
       
-      params[:fee] = Type::Amount.to_nia(params[:fee])
-      params[:delegation] = Type::Amount.to_nia(params[:delegation])
+      params[:fee] = normalize_amount(options.merge amount: params[:fee])
+      params[:delegation] = normalize_amount(options.merge amount: params[:delegation])
       params[:extensions] ||= []
       
       ops = [[:account_create_with_delegation, params]]
@@ -1084,6 +1218,28 @@ module Steem
       process(options.merge(ops: ops), &block)
     end
     
+    # @param options [Hash] options
+    # @option options [String] :wif Active wif
+    # @option options [Hash] :params
+    #   * :creator (String)
+    #   * :fee (String)
+    #   * :extensions (Array)
+    # @option options [Boolean] :pretend Just validate, do not broadcast.
+    # @see https://developers.steem.io/apidefinitions/broadcast-ops#broadcast_ops_claim_account
+    def self.claim_account(options, &block)
+      required_fields = %i(creator fee)
+      params = options[:params]
+      
+      check_required_fields(params, *required_fields)
+      
+      params[:fee] = normalize_amount(options.merge amount: params[:fee])
+      params[:extensions] ||= []
+      
+      ops = [[:claim_account, params]]
+      
+      process(options.merge(ops: ops), &block)
+    end
+        
     # @param options [Hash] options
     # @option options [Array<Array<Hash>] :ops Operations to process.
     # @option options [Boolean] :pretend Just validate, do not broadcast.
@@ -1097,9 +1253,17 @@ module Steem
         trx = tx.transaction
         
         response = if !!options[:pretend]
-          database_api(options).verify_authority(trx: trx)
+          if !!options[:app_base]
+            database_api(options).verify_authority(trx: trx)
+          else
+            database_api(options).verify_authority(trx)
+          end
         else
-          network_broadcast_api(options).broadcast_transaction_synchronous(trx: trx)
+          if !!options[:app_base]
+            network_broadcast_api(options).broadcast_transaction(trx: trx)
+          else
+            network_broadcast_api(options).broadcast_transaction_synchronous(trx)
+          end
         end
         
         break
@@ -1120,13 +1284,37 @@ module Steem
     end
   private
     # @private
+    def self.normalize_amount(options)
+      if !!options[:app_base]
+        Type::Amount.to_h(options[:amount])
+      elsif !!options[:serialize]
+        Type::Amount.to_s(options[:amount])
+      else
+        Type::Amount.to_s(options[:amount])
+      end
+    end
+    
+    def self.normalize_beneficiaries(options)
+      # Type::Beneficiaries.new(options[:beneficiaries])
+      {beneficiaries: options[:beneficiaries]}
+    end
+    
+    # @private
     def self.database_api(options)
-      options[:database_api] ||= Steem::DatabaseApi.new(options)
+      options[:database_api] ||= if !!options[:app_base]
+        Steem::DatabaseApi.new(options)
+      else
+        Steem::CondenserApi.new(options)
+      end
     end
     
     # @private
     def self.network_broadcast_api(options)
-      options[:network_broadcast_api] ||= Steem::NetworkBroadcastApi.new(options)
+      options[:network_broadcast_api] ||= if !!options[:app_base]
+        Steem::NetworkBroadcaseApi.new(options)
+      else
+        Steem::CondenserApi.new(options)
+      end
     end
     
     # @private

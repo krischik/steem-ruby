@@ -17,7 +17,7 @@ module Steem
       get_tags_used_by_author get_transaction_hex
       get_witness_by_account verify_authority)
     
-    METHOD_NAMES_2_ARGS = %i(get_account_bandwidth get_account_reputations
+    METHOD_NAMES_2_ARGS = %i(get_account_reputations
       get_active_votes get_content get_content_replies get_escrow
       get_expiring_vesting_delegations get_ops_in_block
       get_reblogged_by get_required_signatures get_trending_tags
@@ -65,14 +65,24 @@ module Steem
       end
     end
     
+    def test_dependency_injection
+      original_rpc_client_class = Api.default_rpc_client_class
+      
+      Api.register default_rpc_client_class: RPC::HttpClient
+      assert_equal RPC::HttpClient, Api.default_rpc_client_class
+      
+      Api.register default_rpc_client_class: original_rpc_client_class
+      assert_equal original_rpc_client_class, Api.default_rpc_client_class
+    end
+    
     def test_inspect
-      assert_equal "#<CondenserApi [@chain=steem, @methods=<85 elements>]>", @api.inspect
+      assert_equal "#<CondenserApi [@chain=steem, @methods=<84 elements>]>", @api.inspect
     end
     
     def test_inspect_testnet
       vcr_cassette("#{@api.class.api_name}_testnet") do
         api = Api.new(chain: :test)
-        assert_equal "#<CondenserApi [@chain=test, @methods=<85 elements>]>", api.inspect
+        assert_equal "#<CondenserApi [@chain=test, @methods=<84 elements>]>", api.inspect
       end
     end
     
@@ -105,12 +115,26 @@ module Steem
               assert @api.send key, {}
             end
           when :broadcast_transaction then
-            assert_raises IncorrectResponseIdError, "expect void arguments to raise IncorrectResponseIdError for: #{key}" do
-              assert @api.send key, {}
+            assert_raises EmptyTransactionError, "expect void arguments to raise EmptyTransactionError for: #{key}" do
+              assert @api.send key, {
+                ref_block_num: 0,
+                ref_block_prefix: 0,
+                expiration: "1970-01-01T00:00:00",
+                operations: [],
+                extensions: [],
+                signatures: []
+              }
             end
           when :broadcast_transaction_synchronous then
-            assert_raises IncorrectResponseIdError, "expect void arguments to raise IncorrectResponseIdError for: #{key}" do
-              assert @api.send key, {}
+            assert_raises EmptyTransactionError, "expect void arguments to raise EmptyTransactionError for: #{key}" do
+              assert @api.send key, {
+                ref_block_num: 0,
+                ref_block_prefix: 0,
+                expiration: "1970-01-01T00:00:00",
+                operations: [],
+                extensions: [],
+                signatures: []
+              }
             end
           when *METHOD_NAMES_1_ARG
           then

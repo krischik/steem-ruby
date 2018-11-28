@@ -7,21 +7,23 @@ Steem-ruby the Ruby API for Steem blockchain.
 
 Full documentation: http://www.rubydoc.info/gems/steem-ruby
 
+**Note:** *This library depends on AppBase methods that are a work in progress.*
+
 ## `radiator` vs. `steem-ruby`
 
 The `steem-ruby` gem was written from the ground up by `@inertia`, who is also the author of [`radiator`](https://github.com/inertia186/radiator).
 
-> "I intend to continue work on `radiator` indefinitely. But in `radiator-0.5`, I intend to refactor `radiator` so that is uses `steem-ruby` as its core. This means that some features of `radiator` like Serialization will become redundant. I think it's still useful for radiator to do its own serialzation because it reduces the number of API requests." - @inertia
+> "I intend to continue work on `radiator` indefinitely. But in `radiator-0.5`, I intend to refactor `radiator` so that is uses `steem-ruby` as its core. This means that some features of `radiator` like Serialization will become redundant. I think it's still useful for radiator to do its own serialization because it reduces the number of API requests." - @inertia
 
-| `radiator` | `steem-ruby` |
-|-|-|
-| Has internal failover logic | Can have failover delegated externally |
-| Passes `error` responses to the caller | Handles `error` responses and raises exceptions |
-| Supports tx signing, does its own serialization | Also supports tx signing, but delegates serialization to `database_api.get_transaction_hex` |
-| All apis and methods are hardcoded | Asks `jsonrpc` what apis and methods are available from the node |
-| (`radiator-0.4.x`) Only supports AppBase but relies on `condenser_api` | Only supports AppBase but does not rely on `condenser_api` **(WIP)**
-| Small list of helper methods for select ops (in addition to build your own transaction) | Complete implementation of helper methods for every op (in addition to build your own transaction) |
-| Does not (yet) support `json-rpc-batch` requests | Supports `json-rpc-batch` requests |
+`radiator` | `steem-ruby`
+---------- | ------------
+Has internal failover logic | Can have failover delegated externally
+Passes `error` responses to the caller | Handles `error` responses and raises exceptions
+Supports tx signing, does its own serialization | Also supports tx signing, but delegates serialization to `database_api.get_transaction_hex`, then deserializes to verify
+All apis and methods are hardcoded | Asks `jsonrpc` what apis and methods are available from the node
+(`radiator-0.4.x`) Only supports AppBase but relies on `condenser_api` | Only supports AppBase but does not rely on `condenser_api` **(WIP)**
+Small list of helper methods for select ops (in addition to build your own transaction) | Complete implementation of helper methods for every op (in addition to build your own transaction)
+Does not (yet) support `json-rpc-batch` requests | Supports `json-rpc-batch` requests
 
 ## Getting Started
 
@@ -68,6 +70,79 @@ end
 
 *See: [Broadcast](https://www.rubydoc.info/gems/steem-ruby/Steem/Broadcast)*
 
+### Streaming
+
+The value passed to the block is an object, with the keys: `:type` and `:value`.
+
+```ruby
+stream = Steem::Stream.new
+
+stream.operations do |op|
+  puts "#{op.type}: #{op.value}"
+end
+```
+
+To start a stream from a specific block number, pass it as an argument:
+
+```ruby
+stream = Steem::Stream.new
+
+stream.operations(at_block_num: 9001) do |op|
+  puts "#{op.type}: #{op.value}"
+end
+```
+
+You can also grab the related transaction id and block number for each operation:
+
+```ruby
+stream = Steem::Stream.new
+
+stream.operations do |op, trx_id, block_num|
+  puts "#{block_num} :: #{trx_id}"
+  puts "#{op.type}: #{op.value}"
+end
+```
+
+To stream only certain operations:
+
+```ruby
+stream = Steem::Stream.new
+
+stream.operations(types: :vote_operation) do |op|
+  puts "#{op.type}: #{op.value}"
+end
+```
+
+Or pass an array of certain operations:
+
+```ruby
+stream = Steem::Stream.new
+
+stream.operations(types: [:comment_operation, :vote_operation]) do |op|
+  puts "#{op.type}: #{op.value}"
+end
+```
+
+Or (optionally) just pass the operation(s) you want as the only arguments.  This is semantic sugar for when you want specific types and take all of the defaults.
+
+```ruby
+stream = Steem::Stream.new
+
+stream.operations(:vote_operation) do |op|
+  puts "#{op.type}: #{op.value}"
+end
+```
+
+To also include virtual operations:
+
+```ruby
+stream = Steem::Stream.new
+
+stream.operations(include_virtual: true) do |op|
+  puts "#{op.type}: #{op.value}"
+end
+```
+
 ### Multisig
 
 You can use multisignature to broadcast an operation.
@@ -83,6 +158,35 @@ params = {
 Steem::Broadcast.vote(wif: [wif1, wif2], params: params) do |result|
   puts result
 end
+```
+
+In addition to signing with multiple `wif` private keys, it is possible to also export a partially signed transaction to have signing completed by someone else.
+
+```ruby
+builder = Steem::TransactionBuilder.new(wif: wif1)
+
+builder.put(vote: {
+  voter: voter,
+  author: author,
+  permlink: permlink,
+  weight: weight
+})
+
+trx = builder.sign.to_json
+
+File.open('trx.json', 'w') do |f|
+  f.write(trx)
+end
+```
+
+Then send the contents of `trx.json` to the other signing party so they can privately sign and broadcast the transaction.
+
+```ruby
+trx = open('trx.json').read
+builder = Steem::TransactionBuilder.new(wif: wif2, trx: trx)
+api = Steem::CondenserApi.new
+trx = builder.transaction
+api.broadcast_transaction_synchronous(trx)
 ```
 
 ### Get Accounts

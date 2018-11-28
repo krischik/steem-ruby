@@ -12,8 +12,7 @@ module Steem
       MAX_TIMEOUT_BACKOFF = 30
       
       # @private
-      TIMEOUT_ERRORS = [Net::ReadTimeout, Errno::EBADF, Errno::ECONNREFUSED,
-        IOError]
+      TIMEOUT_ERRORS = [Net::ReadTimeout, Errno::EBADF, IOError]
       
       def initialize(options = {})
         @chain = options[:chain] || :steem
@@ -118,7 +117,7 @@ module Steem
         error = response['error'].to_json if !!response['error']
               
         if req_id != res_id
-          raise IncorrectResponseIdError, "#{method}: The json-rpc id did not match.  Request was: #{req_id}, got: #{res_id.inspect}", error.nil? ? nil : error.to_json
+          raise IncorrectResponseIdError, "#{method}: The json-rpc id did not match.  Request was: #{req_id}, got: #{res_id.inspect}", BaseError.send(:build_backtrace, error)
         end
       end
       
@@ -143,7 +142,7 @@ module Steem
           raise TooManyTimeoutsError.new("Too many timeouts for: #{context}", cause)
         elsif @timeout_retry_count % 10 == 0
           msg = "#{@timeout_retry_count} retry attempts for: #{context}"
-          msg += "; cause: #{e}" if !!cause
+          msg += "; cause: #{cause}" if !!cause
           error_pipe.puts msg
         end
         
@@ -161,6 +160,19 @@ module Steem
         @backoff = 0.1 if @backoff > MAX_TIMEOUT_BACKOFF
         
         sleep @backoff
+      end
+      
+      # @private
+      def raise_error_response(rpc_method_name, rpc_args, response)
+        raise UnknownError, "#{rpc_method_name}: #{response}" if response.error.nil?
+        
+        error = response.error
+        
+        if error.message == 'Invalid Request'
+          raise Steem::ArgumentError, "Unexpected arguments: #{rpc_args.inspect}.  Expected: #{rpc_method_name} (#{args_keys_to_s(rpc_method_name)})"
+        end
+        
+        BaseError.build_error(error, rpc_method_name)
       end
     end
   end
