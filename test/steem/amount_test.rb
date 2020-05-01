@@ -779,5 +779,105 @@ module Steem
       end
     end
 
+    def test_zero_00
+       _test = Type::Amount.core_zero(:steem)
+
+       assert_equal(0.0, _test.to_f, "float value  should be 1.0")
+       assert_equal("0.000", _test.amount, "test amount  should be “0.000”")
+       assert_equal(3, _test.precision, "test precision should be 3'")
+       assert_equal("STEEM", _test.asset, "test asset should be  “STEEM”")
+       assert_equal("@@000000021", _test.nai, "test nai should be “@@000000021”")
+       assert_equal(:steem, _test.chain, "test chain should be :steem")
+       assert_equal("0.000 STEEM", _test.to_s, "string value should be “0.000 STEEM”")
+       assert_equal(["0", 3, "@@000000021"], _test.to_a, "test array should be [“0000”, 3, “@@000000021”]")
+       assert_equal(
+	  {:amount => "0", :nai => "@@000000021", :precision => 3},
+	  _test.to_h,
+	  "test hash should be {:amount=>“0000”, :nai=>“@@000000021”, :precision=>3}]")
+    end
+    def test_zero_01
+       _test = Type::Amount.core_zero(:hive)
+
+       assert_equal(0.0, _test.to_f, "float value  should be 0.0")
+       assert_equal("0.000", _test.amount, "test amount  should be “0.000”")
+       assert_equal(3, _test.precision, "test precision should be 3'")
+       assert_equal("HIVE", _test.asset, "test asset should be  “HIVE”")
+       assert_equal("@@000000021", _test.nai, "test nai should be “@@000000021”")
+       assert_equal(:hive, _test.chain, "test chain should be :hive")
+       assert_equal("0.000 HIVE", _test.to_s, "string value should be “0.000 HIVE”")
+       assert_equal(["0", 3, "@@000000021"], _test.to_a, "test array should be [“0”, 3, “@@000000021”]")
+       assert_equal(
+	  {:amount => "0", :nai => "@@000000021", :precision => 3},
+	  _test.to_h,
+	  "test array should be {:amount => “1234567”, :nai =>  “@@000000021”, :precision =>  3}")
+    end
+
+    def test_zero_02
+       _test = Type::Amount.debt_zero(:steem)
+
+       assert_equal(0.0, _test.to_f, "float value  should be 0.0")
+       assert_equal("0.000", _test.amount, "test amount  should be “0.000”")
+       assert_equal(3, _test.precision, "test precision should be 3'")
+       assert_equal("SBD", _test.asset, "test asset should be  “SBD”")
+       assert_equal("@@000000013", _test.nai, "test nai should be “@@000000013”")
+       assert_equal(:steem, _test.chain, "test chain should be :steem")
+       assert_equal("0.000 SBD", _test.to_s, "string value should be “0.0 SBD”")
+       assert_equal(["0", 3, "@@000000013"], _test.to_a, "test array should be [“0”, 3, “@@000000013”]")
+       assert_equal(
+	  {:amount => "0", :nai => "@@000000013", :precision => 3},
+	  _test.to_h,
+	  "test array should be {:amount => “0”, :nai =>  “@@000000013”, :precision =>  3}")
+    end
+
+    def test_zero_03
+       _test = Type::Amount.debt_zero(:hive)
+
+       assert_equal(0.0, _test.to_f, "float value  should be 0.0")
+       assert_equal("0.000", _test.amount, "test amount  should be “0.000”")
+       assert_equal(3, _test.precision, "test precision should be 3'")
+       assert_equal("HBD", _test.asset, "test asset should be  “HBD”")
+       assert_equal("@@000000013", _test.nai, "test nai should be “@@000000013”")
+       assert_equal(:hive, _test.chain, "test chain should be :hive")
+       assert_equal("0.000 HBD", _test.to_s, "string value should be “0.000 HBD”")
+       assert_equal(["0", 3, "@@000000013"], _test.to_a, "test array should be [“0”, 3, “@@000000013”]")
+       assert_equal(
+	  {:amount => "0", :nai => "@@000000013", :precision => 3},
+	  _test.to_h,
+	  "test array should be {:amount => “0”, :nai =>  “@@000000013”, :precision =>  3}")
+    end
+
+    def test_zero_04
+       _test = Type::Amount.vest_zero(:steem)
+
+       assert_equal(0.0, _test.to_f, "float value  should be 0.0")
+       assert_equal("0.000000", _test.amount, "test amount  should be “0.000000”")
+       assert_equal(6, _test.precision, "test precision should be 3'")
+       assert_equal("VESTS", _test.asset, "test asset should be  “VESTS”")
+       assert_equal("@@000000037", _test.nai, "test nai should be “@@000000037”")
+       assert_equal(:steem, _test.chain, "test chain should be :steem")
+       assert_equal("0.000000 VESTS", _test.to_s, "string value should be “0.0 VESTS”")
+       assert_equal(["0", 6, "@@000000037"], _test.to_a, "test array should be [“0”, 6, “@@000000037”]")
+       assert_equal(
+	  {:amount => "0", :nai => "@@000000037", :precision => 6},
+	  _test.to_h,
+	  "test array should be {:amount => “0”, :nai =>  “@@000000037”, :precision =>  6}")
+    end
+
+    def test_zero_05
+       _test = Type::Amount.vest_zero(:hive)
+
+       assert_equal(0.0, _test.to_f, "float value  should be 0.0")
+       assert_equal("0.000000", _test.amount, "test amount  should be “0.000000”")
+       assert_equal(6, _test.precision, "test precision should be 3'")
+       assert_equal("VESTS", _test.asset, "test asset should be  “VESTS”")
+       assert_equal("@@000000037", _test.nai, "test nai should be “@@000000037”")
+       assert_equal(:hive, _test.chain, "test chain should be :hive")
+       assert_equal("0.000000 VESTS", _test.to_s, "string value should be “0.0 VESTS”")
+       assert_equal(["0", 6, "@@000000037"], _test.to_a, "test array should be [“0.00000”, 6, “@@000000037”]")
+       assert_equal(
+	  {:amount => "0", :nai => "@@000000037", :precision => 6},
+	  _test.to_h,
+	  "test array should be {:amount => “0”, :nai =>  “@@000000037”, :precision =>  6}")
+    end
   end
 end
