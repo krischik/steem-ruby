@@ -91,7 +91,7 @@ module Steem
     end
     
     def initialize(options = {})
-      @chain = options[:chain] || :steem
+      @chain = options[:chain] # || :steem
       @error_pipe = options[:error_pipe] || STDERR
       @api_name = self.class.api_name ||= :condenser_api
       

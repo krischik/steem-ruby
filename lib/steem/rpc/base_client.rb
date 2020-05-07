@@ -15,7 +15,7 @@ module Steem
       TIMEOUT_ERRORS = [Net::ReadTimeout, Errno::EBADF, IOError]
       
       def initialize(options = {})
-        @chain = options[:chain] || :steem
+        @chain = options[:chain] # || :steem
         @error_pipe = options[:error_pipe] || STDERR
         @api_name = options[:api_name]
         @url = case @chain

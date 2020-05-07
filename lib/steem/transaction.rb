@@ -11,7 +11,7 @@ module Steem
     def initialize(options = {})
       raise ArgumentError, "Parameter :chain must be set." unless options.key?(:chain)
 
-      @chain = options[:chain]
+      @chain = options[:chain] # || :steem
 
       if !!(hex = options.delete(:hex))
         marshal = Marshal.new({hex: hex, chain: @chain})
