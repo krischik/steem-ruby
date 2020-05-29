@@ -28,7 +28,7 @@ end
 
 # before tests, outside test threads
 VCR.insert_cassette('global_cassette', record: :once, match_requests_on: [:method, :uri, :body])
-@jsonrpc = Steem::Jsonrpc.new
+@jsonrpc = Steem::Jsonrpc.new({chain: :steem})
 @jsonrpc.get_api_methods # caches up methods
 
 class Steem::Test < MiniTest::Test

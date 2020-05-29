@@ -2,11 +2,9 @@ require 'test_helper'
 
 module Steem
   class AmountTest < Steem::Test
-    def setup
-      @amount = Type::Amount.new('0.000 STEEM', :steem)
-    end
-
     def test_to_s
+      _amount = Type::Amount.new('0.000 STEEM', :steem)
+
       assert_equal '0.000 SBD', Type::Amount.to_s(['0', 3, '@@000000013'], :steem)
       assert_equal '0.000 STEEM', Type::Amount.to_s(['0', 3, '@@000000021'], :steem)
       assert_equal '0.000000 VESTS', Type::Amount.to_s(['0', 6, '@@000000037'], :steem)
@@ -17,6 +15,8 @@ module Steem
     end
 
     def test_to_h
+      _amount = Type::Amount.new('0.000 STEEM', :steem)
+
       assert_equal({amount: '0', precision: 3, nai: '@@000000013'}, Type::Amount.to_h('0.000 SBD', :steem))
       assert_equal({amount: '0', precision: 3, nai: '@@000000021'}, Type::Amount.to_h('0.000 STEEM', :steem))
       assert_equal({amount: '0', precision: 6, nai: '@@000000037'}, Type::Amount.to_h('0.000000 VESTS', :steem))
@@ -27,7 +27,9 @@ module Steem
     end
 
     def test_to_bytes
-      assert @amount.to_bytes
+       _amount = Type::Amount.new('0.000 STEEM', :steem)
+
+       assert _amount.to_bytes
     end
 
     def test_new_00
