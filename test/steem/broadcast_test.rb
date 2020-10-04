@@ -14,14 +14,14 @@ module Steem
       app_base = false # TODO: Randomly set true or false to test differences.
       
       if app_base
-        @database_api = Steem::DatabaseApi.new(url: TEST_NODE)
-        @block_api = Steem::BlockApi.new(url: TEST_NODE)
-        @network_broadcast_api = Steem::NetworkBroadcastApi.new(url: TEST_NODE)
+        @database_api = Steem::DatabaseApi.new({url: TEST_NODE, chain: TEST_CHAIN})
+        @block_api = Steem::BlockApi.new({url: TEST_NODE, chain: TEST_CHAIN})
+        @network_broadcast_api = Steem::NetworkBroadcastApi.new({url: TEST_NODE, chain: TEST_CHAIN})
       else
-        @database_api = @block_api = @network_broadcast_api = Steem::CondenserApi.new(url: TEST_NODE)
+        @database_api = @block_api = @network_broadcast_api = Steem::CondenserApi.new({url: TEST_NODE, chain: TEST_CHAIN})
       end
       
-      @jsonrpc = Jsonrpc.new(url: TEST_NODE)
+      @jsonrpc = Jsonrpc.new({url: TEST_NODE, chain: TEST_CHAIN})
       @account_name = ENV.fetch('TEST_ACCOUNT_NAME', 'social')
       @wif = ENV.fetch('TEST_WIF', '5JrvPrQeBBvCRdjv29iDvkwn3EQYZ9jqfAHzrCyUvfbEbRkrYFC')
       @pretend = true

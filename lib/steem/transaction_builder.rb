@@ -64,7 +64,7 @@ module Steem
       end
       
       @trx ||= Transaction.new
-      @chain = options[:chain]
+      @chain = options[:chain] # || :steem
       @error_pipe = options[:error_pipe] || STDERR
       @chain_id = options[:chain_id]
       @chain_id ||= case @chain

@@ -3,7 +3,7 @@ require 'test_helper'
 module Steem
   class RpcClientTest < Steem::Test
     def setup
-      @rpc_client = RPC::HttpClient.new(url: TEST_NODE)
+      @rpc_client = RPC::HttpClient.new({url: TEST_NODE, chain: TEST_CHAIN})
     end
     
     def test_http_request

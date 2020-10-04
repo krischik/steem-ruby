@@ -3,8 +3,8 @@ require 'test_helper'
 module Steem
   class TestnetTest < Steem::Test
     def setup
-      @api = Api.new(url: TEST_NODE)
-      @jsonrpc = Jsonrpc.new(url: TEST_NODE)
+      @api = Api.new({url: TEST_NODE, chain: TEST_CHAIN})
+      @jsonrpc = Jsonrpc.new({url: TEST_NODE, chain: TEST_CHAIN})
       @methods = @jsonrpc.get_api_methods[@api.class.api_name]
       
       @api.get_config do |result|

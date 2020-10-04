@@ -47,7 +47,7 @@ module Steem
     NETWORKS_HIVE_DEBT_SYMBOL = 'HBD'
     NETWORKS_HIVE_VEST_SYMBOL = 'VESTS'
     NETWORKS_HIVE_DEFAULT_NODE = 'https://api.openhive.network' # √
-    NETWORKS_HIVE_RESTFUL_URL = 'https://anyx.io/v1'
+    NETWORKS_HIVE_RESTFUL_URL = ''
     NETWORKS_HIVE_FAILOVER_URLS = [
        NETWORKS_HIVE_DEFAULT_NODE,
        'https://anyx.io',

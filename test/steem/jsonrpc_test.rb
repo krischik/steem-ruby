@@ -3,7 +3,7 @@ require 'test_helper'
 module Steem
   class JsonrpcTest < Steem::Test
     def setup
-      @jsonrpc = Jsonrpc.new(url: TEST_NODE)
+      @jsonrpc = Jsonrpc.new({url: TEST_NODE, chain: TEST_CHAIN})
     end
     
     def test_reset_api_methods
