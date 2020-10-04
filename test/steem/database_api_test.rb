@@ -5,8 +5,8 @@ module Steem
     include Utils
     
     def setup
-      @api = Steem::DatabaseApi.new(url: TEST_NODE)
-      @jsonrpc = Jsonrpc.new(url: TEST_NODE)
+      @api = Steem::DatabaseApi.new({url: TEST_NODE, chain: TEST_CHAIN})
+      @jsonrpc = Jsonrpc.new({url: TEST_NODE, chain: TEST_CHAIN})
       @methods = @jsonrpc.get_api_methods[@api.class.api_name]
     end
     def test_api_class_name
@@ -14,7 +14,7 @@ module Steem
     end
     
     def test_inspect
-      assert_equal "#<DatabaseApi [@chain=steem, @methods=<47 elements>]>", @api.inspect
+      assert_equal "#<DatabaseApi [@chain=steem, @methods=<50 elements>]>", @api.inspect
     end
     
     def test_method_missing
@@ -658,7 +658,7 @@ module Steem
         extensions: []
       }
       
-      api = Steem::DatabaseApi.new(url: 'https://testnet.steemitdev.com')
+      api = Steem::DatabaseApi.new({url: 'https://testnet.steemitdev.com', chain: :steem})
       
       api.get_transaction_hex(trx: trx) do |result|
         # Sometimes testnet is unstable.

@@ -33,10 +33,16 @@ VCR.insert_cassette('global_cassette', record: :once, match_requests_on: [:metho
 
 class Steem::Test < MiniTest::Test
   defined? prove_it! and prove_it!
+
+  TEST_CHAIN = ENV.fetch 'CHAIN_ID', :steem
+  TEST_NODE  = ENV.fetch 'TEST_NODE', Steem::ChainConfig::NETWORKS_STEEM_DEFAULT_NODE
   
-  TEST_NODE = ENV.fetch 'TEST_NODE', Steem::ChainConfig::NETWORKS_STEEM_DEFAULT_NODE
-  # TEST_NODE = Steem::ChainConfig::NETWORKS_TEST_DEFAULT_NODE
+  # TEST_CHAIN = :test
+  # TEST_NODE  = Steem::ChainConfig::NETWORKS_TEST_DEFAULT_NODE
   
+  # TEST_CHAIN = :hive
+  # TEST_NODE  = Steem::ChainConfig::NETWORKS_HIVE_DEFAULT_NODE
+
   # Most likely modes: 'once' and 'new_episodes'
   VCR_RECORD_MODE = (ENV['VCR_RECORD_MODE'] || 'new_episodes').to_sym
   
