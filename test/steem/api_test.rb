@@ -50,8 +50,8 @@ module Steem
       METHOD_NAMES_1_ARG_NO_ERROR + METHOD_NAMES_0_ARGS + SKIP_METHOD_NAMES
     
     def setup
-      @api = Api.new(url: TEST_NODE)
-      @jsonrpc = Jsonrpc.new(url: TEST_NODE)
+      @api = Api.new({url: TEST_NODE, chain: TEST_CHAIN})
+      @jsonrpc = Jsonrpc.new({url: TEST_NODE, chain: TEST_CHAIN})
       @methods = @jsonrpc.get_api_methods[@api.class.api_name]
     end
     
@@ -61,7 +61,7 @@ module Steem
     
     def test_unknown_api_name
       assert_raises UnknownApiError, 'expect unknown api error' do
-        Steem::FakeApi.new
+        Steem::FakeApi.new({chain: TEST_CHAIN})
       end
     end
     
@@ -76,16 +76,24 @@ module Steem
     end
     
     def test_inspect
-      assert_equal "#<CondenserApi [@chain=steem, @methods=<84 elements>]>", @api.inspect
+      assert_equal "#<CondenserApi [@chain=steem, @methods=<87 elements>]>", @api.inspect
     end
     
     def test_inspect_testnet
       vcr_cassette("#{@api.class.api_name}_testnet") do
         api = Api.new(chain: :test)
-        assert_equal "#<CondenserApi [@chain=test, @methods=<84 elements>]>", api.inspect
+        assert_equal "#<CondenserApi [@chain=test, @methods=<87 elements>]>", api.inspect
       end
     end
-    
+
+    def test_inspect_hive
+       vcr_cassette("#{@api.class.api_name}_hive") do
+	  api = Api.new(chain: :hive)
+	  assert_equal "#<CondenserApi [@chain=hive, @methods=<87 elements>]>", api.inspect
+       end
+    end
+
+
     def test_unsupported_chain
       vcr_cassette("#{@api.class.api_name}_unsupported_chain") do
         assert_raises UnsupportedChainError do

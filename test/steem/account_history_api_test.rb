@@ -4,8 +4,8 @@ module Steem
   # :nocov:
   class AccountHistoryApiTest < Steem::Test
     def setup
-      @api = Steem::AccountHistoryApi.new(url: TEST_NODE)
-      @jsonrpc = Jsonrpc.new(url: TEST_NODE)
+      @api = Steem::AccountHistoryApi.new({url: TEST_NODE, chain: TEST_CHAIN})
+      @jsonrpc = Jsonrpc.new({url: TEST_NODE, chain: TEST_CHAIN})
       @methods = @jsonrpc.get_api_methods[@api.class.api_name]
     rescue UnknownApiError => e
       skip('AccountHistoryApi is disabled.')

@@ -3,8 +3,8 @@ require 'test_helper'
 module Steem
   class StreamTest < Steem::Test
     def setup
-      @stream = Steem::Stream.new(url: TEST_NODE, no_warn: true)
-      @database_api = Steem::DatabaseApi.new(url: TEST_NODE)
+      @stream = Steem::Stream.new({url: TEST_NODE, no_warn: true, chain: TEST_CHAIN})
+      @database_api = Steem::DatabaseApi.new({url: TEST_NODE, chain: TEST_CHAIN})
       
       @database_api.get_dynamic_global_properties do |properties|
         @head_block_num = properties.head_block_number
@@ -26,7 +26,7 @@ module Steem
     end
     
     def test_block_headers_mode_head
-      stream = Steem::Stream.new(url: TEST_NODE, mode: :head)
+      stream = Steem::Stream.new({url: TEST_NODE, mode: :head, chain: TEST_CHAIN})
       options = {
         until_block_num: @head_block_num + 1
       }
@@ -40,7 +40,7 @@ module Steem
     end
     
     def test_block_headers_mode_bogus
-      stream = Steem::Stream.new(url: TEST_NODE, mode: :WRONG)
+      stream = Steem::Stream.new({url: TEST_NODE, mode: :WRONG, chain: TEST_CHAIN})
       options = {
         until_block_num: @head_block_num + 1
       }

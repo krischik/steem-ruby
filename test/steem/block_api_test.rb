@@ -3,8 +3,8 @@ require 'test_helper'
 module Steem
   class BlockApiTest < Steem::Test
     def setup
-      @block_api = BlockApi.new(url: TEST_NODE)
-      @jsonrpc = Jsonrpc.new(url: TEST_NODE)
+      @block_api = BlockApi.new({url: TEST_NODE, chain: TEST_CHAIN})
+      @jsonrpc = Jsonrpc.new({url: TEST_NODE, chain: TEST_CHAIN})
       @methods = @jsonrpc.get_api_methods[@block_api.class.api_name]
     end
     
@@ -79,7 +79,7 @@ module Steem
     
     def test_oddballs
       oddballs = [994240]
-      api = Steem::Api.new(url: TEST_NODE)
+      api = Steem::Api.new({url: TEST_NODE, chain: TEST_CHAIN})
       
       vcr_cassette('block_api_oddballs', record: :once) do
         oddballs.each do |block_num|

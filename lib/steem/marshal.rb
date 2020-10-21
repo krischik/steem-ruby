@@ -19,7 +19,7 @@ module Steem
         options[:bytes]
       end
 
-      @chain = options[:chain]
+      @chain = options[:chain] # || :steem
       @prefix ||= case @chain
       when :steem then NETWORKS_STEEM_ADDRESS_PREFIX
       when :test then NETWORKS_TEST_ADDRESS_PREFIX
